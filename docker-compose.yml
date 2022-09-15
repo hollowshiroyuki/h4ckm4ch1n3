@@ -1,0 +1,75 @@
+version: '3.4'
+
+services:
+  # OpenVPN docker container to connect all this crap to the HTB network
+  vpn:
+    container_name: vpn
+    image: dperson/openvpn-client
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - default
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    restart: unless-stopped
+    security_opt:
+      - label:disable
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    volumes:
+      - /dev/net:/dev/net:z
+      - ./vpn:/vpn
+    environment:
+      DEFAULT_GATEWAY: 'false'
+    extra_hosts:
+      - opensource.htb:10.10.11.164
+
+  # The *actual* h4ckm4ch1n3
+  hackmachine:
+    image: parrotsec/security
+    depends_on:
+      - vpn
+    network_mode: container:vpn    # Linux
+    restart: unless-stopped
+    volumes:
+      - ./data:/root
+      - ./browser/downloads:/root/Downloads
+      - /srv/hackmachine:/var/lib/hackmachine:Z
+
+  # Firefox container to access webpages on the HTB network
+  browser:
+    image: linuxserver/firefox:version-94.0-r0
+    shm_size: 3g
+    depends_on:
+      - vpn
+      - proxy
+    network_mode: container:vpn    # Linux
+    volumes:
+      - ./browser:/config
+    tmpfs:
+      - /config/custom-cont-init.d
+      - /config/custom-services.d
+
+  # Proxy to access vpn connected containers from the local network
+  proxy:
+    image: dperson/nginx
+    # depends_on:
+    #   - browser
+    links:
+      - vpn:browser
+    networks:
+      - default
+    ports:
+      - "8080:80"
+    tmpfs:
+      - /run
+      - /tmp
+      - /var/cache/nginx
+    restart: unless-stopped
+    read_only: true
+    command: -w "http://browser:3000;/"
+
+networks:
+  default:
