@@ -31,7 +31,7 @@ services:
     image: parrotsec/security
     depends_on:
       - vpn
-    network_mode: container:vpn    # Linux
+    network_mode: container:vpn
     restart: unless-stopped
     volumes:
       - ./data:/root
@@ -45,7 +45,7 @@ services:
     depends_on:
       - vpn
       - proxy
-    network_mode: container:vpn    # Linux
+    network_mode: container:vpn
     volumes:
       - ./browser:/config
     tmpfs:
@@ -55,8 +55,6 @@ services:
   # Proxy to access vpn connected containers from the local network
   proxy:
     image: dperson/nginx
-    # depends_on:
-    #   - browser
     links:
       - vpn:browser
     networks:
